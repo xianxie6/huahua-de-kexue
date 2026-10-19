@@ -1,0 +1,178 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>画画的科学</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500&family=Noto+Serif+SC:wght@600;900&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* 放映厅：一块大银幕 + 片单。刻意只做暗色，像关了灯的影院；顶部一条九级明度色阶做系列标识 */
+:root {
+  --bg: #0f1013;
+  --panel: #17181d;
+  --fg: #eceae4;
+  --dim: #8d8f98;
+  --line: #262830;
+  --accent: #c9a46a;   /* 赭石：像画室里的暖光 */
+  --display: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --body: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --mono: "JetBrains Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 28px 72px; display: grid; gap: 44px; }
+
+/* 顶栏 */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.brand { font-family: var(--display); font-weight: 900; font-size: 26px; letter-spacing: .08em; }
+.brand span { color: var(--accent); }
+.scale { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.scale i { display: block; width: 18px; height: 6px; }
+.scale .row { display: flex; border-radius: 2px; overflow: hidden; }
+
+/* 银幕 */
+.stage { display: grid; gap: 22px; }
+.screen { position: relative; border-radius: 6px; overflow: hidden; background: #000; box-shadow: 0 40px 120px -40px rgba(0,0,0,.9); }
+.screen video { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; background: #000; }
+.cover { position: absolute; inset: 0; display: grid; place-items: center; background: center / cover no-repeat; transition: opacity .35s; }
+.cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,16,19,0) 45%, rgba(15,16,19,.75)); }
+.cover.off { opacity: 0; pointer-events: none; }
+.big-play { position: relative; z-index: 1; width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(236,234,228,.12); border: 1px solid rgba(236,234,228,.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: transform .25s, background .25s; }
+.cover:hover .big-play { transform: scale(1.08); background: rgba(201,164,106,.35); }
+.big-play svg { width: 26px; height: 26px; fill: var(--fg); margin-left: 4px; }
+.now { display: flex; justify-content: space-between; align-items: end; gap: 12px 24px; flex-wrap: wrap; }
+.now h1 { margin: 0; font-family: var(--display); font-weight: 900; font-size: clamp(26px, 4.2vw, 48px); line-height: 1.2; letter-spacing: .02em; text-wrap: balance; min-width: 0; }
+.meta { display: flex; gap: 12px; align-items: center; font-family: var(--mono); font-size: 13px; color: var(--dim); }
+.tag { font-family: var(--body); font-size: 12px; letter-spacing: .14em; color: var(--accent); border: 1px solid currentColor; padding: 1px 10px; border-radius: 2px; }
+
+/* 片单 */
+.label { font-size: 12px; letter-spacing: .3em; color: var(--dim); display: flex; gap: 12px; align-items: baseline; margin-bottom: 18px; }
+.label b { font-family: var(--mono); font-weight: 400; color: var(--fg); letter-spacing: 0; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 22px; }
+.card { display: grid; gap: 12px; }
+.thumb { position: relative; border-radius: 4px; overflow: hidden; aspect-ratio: 16 / 9; max-width: 100%; background: var(--panel); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s cubic-bezier(.2,.7,.2,1), filter .3s; filter: saturate(.9) brightness(.92); }
+.card:hover .thumb img { transform: scale(1.04); filter: none; }
+.thumb .dur { position: absolute; right: 8px; bottom: 8px; font-family: var(--mono); font-size: 12px; padding: 1px 7px; border-radius: 2px; background: rgba(15,16,19,.8); }
+.thumb .playing { position: absolute; left: 8px; top: 8px; font-size: 11px; letter-spacing: .2em; padding: 2px 8px; border-radius: 2px; background: var(--accent); color: var(--bg); display: none; }
+.card[aria-current="true"] .playing { display: block; }
+.card[aria-current="true"] .thumb { outline: 1px solid var(--accent); outline-offset: 3px; }
+.card .t { font-size: 16px; font-weight: 500; line-height: 1.45; }
+.card .k { font-size: 12px; color: var(--dim); letter-spacing: .12em; margin-top: 2px; }
+
+/* 即将上线 */
+.soon { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); }
+.soon div { padding: 16px 18px 4px 0; display: grid; gap: 6px; align-content: start; }
+.soon i { width: 22px; height: 4px; border-radius: 1px; display: block; }
+.soon span { color: var(--dim); font-size: 14px; line-height: 1.5; }
+
+footer { font-family: var(--mono); font-size: 11px; color: var(--dim); letter-spacing: .06em; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 18px; }
+
+@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .soon { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .big-play { width: 64px; height: 64px; }
+  .scale .cap { display: none; }
+  .wrap { gap: 36px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">画画的<span>科学</span></div>
+    <div class="scale" aria-hidden="true"><span class="cap">N9</span><div class="row" id="scale"></div><span class="cap">N1</span></div>
+  </header>
+
+  <section class="stage" id="watch" aria-label="正在播放">
+    <div class="screen">
+      <video id="player" controls playsinline preload="metadata"></video>
+      <button class="cover" id="cover" aria-label="播放"><span class="big-play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9z"/></svg></span></button>
+    </div>
+    <div class="now">
+      <h1 id="nowTitle"></h1>
+      <div class="meta"><span class="tag" id="nowTag"></span><span id="nowDur"></span></div>
+    </div>
+  </section>
+
+  <section aria-label="全部视频">
+    <div class="label">全部视频 <b id="count"></b></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section aria-label="即将上线">
+    <div class="label">即将上线</div>
+    <div class="soon" id="soon"></div>
+  </section>
+
+  <footer><span>画面由代码实时计算光照生成</span><span>1920×1080 · 30fps</span></footer>
+</div>
+
+<script>
+// 新做好的视频加在这里，最新的放最前面
+const VIDEOS = [
+  {id: 'e8',   kind: '油画', title: '名画下面，为什么藏着另一幅画？', dur: '2:28', src: 'videos/e8-hidden.mp4',        poster: 'posters/e8.jpg'},
+  {id: 'e6',   kind: '油画', title: '伦勃朗的光，为什么像舞台追光？', dur: '1:47', src: 'videos/e6-rembrandt.mp4',     poster: 'posters/e6.jpg'},
+  {id: 's2e5', kind: '水粉', title: '这两个灰，其实是同一个颜色',     dur: '1:56', src: 'videos/s2e5-same-gray.mp4',    poster: 'posters/s2e5.jpg'},
+  {id: 's2e1', kind: '水粉', title: '影子到底是什么颜色？',           dur: '2:17', src: 'videos/s2e1-shadow-color.mp4', poster: 'posters/s2e1.jpg'},
+  {id: 's1e2', kind: '素描', title: '为什么老师总叫你眯眼看？',       dur: '2:00', src: 'videos/s1e2-squint.mp4',       poster: 'posters/s1e2.jpg'},
+  {id: 's1e1', kind: '素描', title: '为什么球体有五大调子？',         dur: '1:28', src: 'videos/s1e1-sphere-tones.mp4', poster: 'posters/s1e1.jpg'},
+];
+const SOON = [
+  ['#d9b23a', '黄加蓝等于绿，红加绿为什么是黄？'],
+  ['#7b7972', '立方体为什么总画歪？'],
+  ['#3a3733', '一滴墨，为什么能分出五种颜色？'],
+  ['#b5582f', '版画为什么要“反着刻”？'],
+];
+
+document.getElementById('scale').innerHTML = [9.5, 8.5, 7.5, 6.5, 5.5, 4.5, 3.5, 2.5, 1.5].map((v) => {
+  const l = Math.round(Math.pow(v / 10, 1.25) * 255);
+  return `<i style="background: rgb(${l},${l - 1},${l - 4})"></i>`;
+}).join('');
+document.getElementById('count').textContent = VIDEOS.length;
+document.getElementById('soon').innerHTML = SOON.map(([c, t]) => `<div><i style="background:${c}"></i><span>${t}</span></div>`).join('');
+
+const player = document.getElementById('player');
+const cover = document.getElementById('cover');
+const grid = document.getElementById('grid');
+grid.innerHTML = VIDEOS.map((v) => `
+  <button class="card" data-id="${v.id}">
+    <div class="thumb"><img src="${v.poster}" alt="" loading="lazy"><span class="playing">播放中</span><span class="dur">${v.dur}</span></div>
+    <div><div class="t">${v.title}</div><div class="k">${v.kind}</div></div>
+  </button>`).join('');
+
+function load(v, autoplay) {
+  player.src = v.src; player.poster = v.poster;
+  cover.style.backgroundImage = `url(${v.poster})`;
+  cover.classList.toggle('off', !!autoplay);
+  document.getElementById('nowTitle').textContent = v.title;
+  document.getElementById('nowTag').textContent = v.kind;
+  document.getElementById('nowDur').textContent = v.dur;
+  grid.querySelectorAll('.card').forEach((c) => c.setAttribute('aria-current', String(c.dataset.id === v.id)));
+  if (autoplay) {
+    player.play().catch(() => {});
+    document.getElementById('watch').scrollIntoView({behavior: 'smooth', block: 'start'});
+  }
+}
+grid.addEventListener('click', (e) => {
+  const c = e.target.closest('.card');
+  if (c) load(VIDEOS.find((v) => v.id === c.dataset.id), true);
+});
+cover.addEventListener('click', () => { cover.classList.add('off'); player.play().catch(() => {}); });
+player.addEventListener('play', () => cover.classList.add('off'));
+
+// 支持 #s2e1 这样的链接直接打开某一集
+const fromHash = VIDEOS.find((v) => '#' + v.id === location.hash);
+load(fromHash || VIDEOS[0], false);
+</script>
